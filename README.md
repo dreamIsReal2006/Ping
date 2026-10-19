@@ -79,15 +79,16 @@ notifications have been removed from this release. Scores and settings remain
 on the device. Do not configure Play Games or Firebase for this version, and do
 not advertise online leaderboard or rank-alert features.
 
-The privacy policy is included at `public\privacy-policy.html`; Vite copies it
-unchanged to `dist\privacy-policy.html` during the web build. To host it on
-Render:
+The Render site should publish only the static files in `public` so the browser
+game bundle in `dist` is not deployed. `public\index.html` explains that browser
+play is unavailable, and `public\privacy-policy.html` is the privacy policy.
+To host these pages on Render:
 
 1. Push this project to a GitHub repository.
 2. In Render, choose **New > Static Site** and connect that repository and the
    branch you want to deploy.
 3. Leave **Root Directory** empty. Set **Build Command** to
-   `npm ci && npm run build` and **Publish Directory** to `dist`.
+   `npm ci && npm run build` and **Publish Directory** to `public`.
 4. Create the site and wait for its deploy to finish. The policy URL will be
    `https://<your-render-site-name>.onrender.com/privacy-policy.html`. Open that
    URL in a private browser window to confirm it loads without signing in, then
