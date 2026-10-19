@@ -80,9 +80,10 @@ on the device. Do not configure Play Games or Firebase for this version, and do
 not advertise online leaderboard or rank-alert features.
 
 The Render site should publish only the static files in `public` so the browser
-game bundle in `dist` is not deployed. `public\index.html` explains that browser
-play is unavailable, and `public\privacy-policy.html` is the privacy policy.
-To host these pages on Render:
+game bundle in `dist` is not deployed. The app also blocks gameplay outside the
+native Android runtime. `public\index.html` explains that browser play is
+unavailable, and `public\privacy-policy.html` is the privacy policy. To host
+these pages on Render:
 
 1. Push this project to a GitHub repository.
 2. In Render, choose **New > Static Site** and connect that repository and the

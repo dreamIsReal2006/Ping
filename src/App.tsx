@@ -49,6 +49,7 @@ export default function App() {
   const [hapticMode, setHapticMode] = useState<HapticMode>(readHapticMode);
 
   const startNewGame = (mode: GameMode = gameMode) => {
+    if (!Capacitor.isNativePlatform()) return;
     setScore(0);
     setCombo(0);
     setPlayerScores([0, 0]);
@@ -172,6 +173,21 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, gameMode]);
+
+  if (!Capacitor.isNativePlatform()) {
+    return (
+      <div className="min-h-dvh bg-[#050508] px-6 flex items-center justify-center text-center font-sans text-slate-200">
+        <main className="max-w-md">
+          <h1 className="text-2xl font-bold tracking-widest text-white">PING</h1>
+          <p className="mt-4">The game is available in the Android app and cannot be played in a web browser.</p>
+          <p className="mt-3 text-slate-400">游戏仅能在 Android 应用中游玩，网页版本不提供游戏功能。</p>
+          <a className="mt-6 inline-block text-sky-400 underline" href="/privacy-policy.html">
+            Privacy Policy / 隐私政策
+          </a>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="w-screen h-dvh bg-[#020204] flex items-center justify-center overflow-hidden font-sans select-none">
