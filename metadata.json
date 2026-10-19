@@ -1,0 +1,5 @@
+{
+  "name": "Ping - Offline Rhythm Game",
+  "description": "An offline rhythm tapping game with local high scores, synthesized sound effects, and optional vibration feedback.",
+  "requestFramePermissions": []
+}
