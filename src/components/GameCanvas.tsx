@@ -11,6 +11,7 @@ interface GameCanvasProps {
   isPaused: boolean;
   onGameOver: (stats: GameStats) => void;
   onScoreUpdate: (score: number, combo: number, playerScores: [number, number], remainingMs: number | null) => void;
+  onLivesUpdate: (playerLives: [number, number]) => void;
 }
 
 interface GeometryChallenge {
@@ -29,6 +30,9 @@ const GEOMETRY_CHALLENGE_DURATION_MS = 12000;
 const GEOMETRY_POINT_HIT_RADIUS = 32;
 const GEOMETRY_PATH_TOLERANCE = 42;
 const MAX_CONCURRENT_MULTI_RING_TARGETS = 3;
+const MAX_PARTICLES = 140;
+const MAX_SHOCKWAVES = 24;
+const MAX_FLOATING_TEXTS = 20;
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   gameSessionId,
@@ -37,6 +41,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   isPaused,
   onGameOver,
   onScoreUpdate,
+  onLivesUpdate,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -55,6 +60,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const comboRef = useRef<number>(0);
   const playerScoresRef = useRef<[number, number]>([0, 0]);
   const playerCombosRef = useRef<[number, number]>([0, 0]);
+  const playerLivesRef = useRef<[number, number]>([3, 3]);
+  const gameOverTriggeredRef = useRef(false);
   const remainingMsRef = useRef<number | null>(null);
   const lastTimerReportRef = useRef(0);
   const maxComboRef = useRef<number>(0);
@@ -88,7 +95,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   // Initialize ambient background particles
   const initAmbientParticles = useCallback((width: number, height: number) => {
     const list: AmbientParticle[] = [];
-    const count = Math.min(Math.floor((width * height) / 14000), 55);
+    const count = Math.min(Math.floor((width * height) / 22000), 36);
     for (let i = 0; i < count; i++) {
       list.push({
         x: Math.random() * width,
@@ -116,9 +123,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Increase the number of simultaneous targets separately from concentric rings.
   const getDifficulty = (hitCount: number) => {
-    const duration = mode === 'zen'
-      ? Math.max(700, 3200 - hitCount * 38)
-      : Math.max(1350, 3200 - hitCount * 24);
+    let duration: number;
+    if (mode === 'duo') {
+      const stage = hitCount <= 5 ? 0
+        : hitCount <= 10 ? 1
+        : hitCount <= 20 ? 2
+        : hitCount <= 30 ? 3
+        : hitCount <= 50 ? 4
+        : hitCount <= 75 ? 5
+        : hitCount <= 100 ? 6
+        : hitCount <= 115 ? 7
+        : hitCount <= 130 ? 8
+        : 8 + Math.ceil((hitCount - 130) / 15);
+      duration = Math.max(500, 3200 - stage * 230);
+    } else {
+      duration = mode === 'zen'
+        ? Math.max(700, 3200 - hitCount * 38)
+        : Math.max(1350, 3200 - hitCount * 24);
+    }
 
     let maxConcurrent = mode === 'duo' ? 2 : 1;
     if (hitCount >= 45) {
@@ -133,9 +155,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   };
 
   const spawnGeometryChallenge = (width: number, height: number): GeometryChallenge | null => {
-    const radius = Math.min(width * 0.23, 100);
-    const safeTop = 115 + radius;
-    const safeBottom = height - 100 - radius;
+    const landscape = width > height;
+    const radius = landscape ? Math.min(height * 0.22, 72) : Math.min(width * 0.23, 100);
+    const safeTop = (landscape ? 42 : 115) + radius;
+    const safeBottom = height - (landscape ? 42 : 100) - radius;
     const safeLeft = 55 + radius;
     const safeRight = width - 55 - radius;
     if (safeRight <= safeLeft || safeBottom <= safeTop) return null;
@@ -221,19 +244,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const maxOuterRings = getMaxOuterRings(successfulHitsRef.current);
     const targetDuration = customDuration || duration;
 
-    // Ergonomic target radius tailored for vertical smartphone screens (32px - 38px)
+    // Keep targets touch-friendly on both landscape phones and larger tablets.
     const innerRadius = Math.min(Math.max(width * 0.08, 32), 38);
     const initialOuterRadius = innerRadius * 3.1;
 
-    // Safe boundaries: respect Android top notch/status bar (115px) and bottom gesture chin (100px)
-    const laneTop = mode === 'duo' ? lane * height / 2 : 0;
-    const laneBottom = mode === 'duo' ? (lane + 1) * height / 2 : height;
-    const safeTop = mode === 'duo'
-      ? laneTop + (lane === 0 ? 115 : 36)
-      : 115;
-    const safeBottom = mode === 'duo' ? laneBottom - 42 : height - 100;
-    const safeLeft = 55;
-    const safeRight = width - 55;
+    const landscape = width > height;
+    const horizontalDuo = mode === 'duo' && landscape;
+    const laneTop = mode === 'duo' && !landscape ? lane * height / 2 : 0;
+    const laneBottom = mode === 'duo' && !landscape ? (lane + 1) * height / 2 : height;
+    const laneLeft = horizontalDuo ? lane * width / 2 : 0;
+    const laneRight = horizontalDuo ? (lane + 1) * width / 2 : width;
+    const safeTop = landscape
+      ? horizontalDuo ? 38 : 62
+      : mode === 'duo' ? laneTop + (lane === 0 ? 82 : 36) : 82;
+    const safeBottom = landscape
+      ? height - (horizontalDuo ? 38 : 54)
+      : mode === 'duo' ? laneBottom - 42 : height - 72;
+    const safeLeft = horizontalDuo ? laneLeft + 54 : 55;
+    const safeRight = horizontalDuo ? laneRight - 54 : width - 55;
 
     if (safeRight <= safeLeft || safeBottom <= safeTop) return null;
 
@@ -314,7 +342,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Trigger explosion shatter effect
   const createExplosion = (x: number, y: number, color: string, intensity: number = 1) => {
-    const particleCount = Math.floor(18 * intensity);
+    const particleCount = Math.min(
+      Math.floor(18 * intensity),
+      MAX_PARTICLES - particlesRef.current.length
+    );
 
     // 1. Shards and Sparks
     for (let i = 0; i < particleCount; i++) {
@@ -339,6 +370,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }
 
     // 2. High-speed Shockwave Ring
+    if (shockwavesRef.current.length >= MAX_SHOCKWAVES) shockwavesRef.current.shift();
     shockwavesRef.current.push({
       x,
       y,
@@ -352,6 +384,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   // Add floating judgment text
   const addFloatingText = (x: number, y: number, text: string, color: string, subtext?: string) => {
+    if (floatingTextsRef.current.length >= MAX_FLOATING_TEXTS) floatingTextsRef.current.shift();
     floatingTextsRef.current.push({
       id: nextTextIdRef.current++,
       x,
@@ -372,7 +405,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const colors = ['#38BDF8', '#818CF8', '#C084FC', '#F43F5E'];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < Math.min(8, MAX_PARTICLES - particlesRef.current.length); i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = Math.random() * 1.5 + 0.8;
       particlesRef.current.push({
@@ -407,6 +440,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     comboRef.current = 0;
     playerScoresRef.current = [0, 0];
     playerCombosRef.current = [0, 0];
+    playerLivesRef.current = [3, 3];
+    gameOverTriggeredRef.current = false;
     remainingMsRef.current = mode === 'timed' ? 120_000 : null;
     lastTimerReportRef.current = 0;
     maxComboRef.current = 0;
@@ -420,6 +455,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     startTimeRef.current = performance.now();
     lastSpawnTimeRef.current = performance.now();
     onScoreUpdateRef.current(0, 0, [0, 0], remainingMsRef.current);
+    onLivesUpdateRef.current([3, 3]);
 
     const canvas = canvasRef.current;
     if (canvas) {
@@ -436,7 +472,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   }, [mode]);
 
   // Handle Game Over (stable callback)
-  const triggerGameOver = useCallback(() => {
+  const triggerGameOver = useCallback((duoWinner?: 1 | 2) => {
+    if (gameOverTriggeredRef.current) return;
+    gameOverTriggeredRef.current = true;
     soundManager.playMiss();
     hapticManager.triggerMiss();
 
@@ -451,6 +489,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       totalClicks: totalClicksRef.current,
       gameDurationSec: Math.floor((performance.now() - startTimeRef.current) / 1000),
       playerScores: [...playerScoresRef.current] as [number, number],
+      duoWinner,
     };
 
     if (mode !== 'duo' && stats.score > stats.highScore) {
@@ -460,6 +499,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     onGameOverRef.current(stats);
   }, [mode]);
+
+  const onLivesUpdateRef = useRef(onLivesUpdate);
+  onLivesUpdateRef.current = onLivesUpdate;
+
+  const loseDuoLife = (lane: 0 | 1, x: number, y: number) => {
+    if (mode !== 'duo' || gameOverTriggeredRef.current) return;
+    playerLivesRef.current[lane] = Math.max(0, playerLivesRef.current[lane] - 1);
+    playerCombosRef.current[lane] = 0;
+    comboRef.current = Math.max(...playerCombosRef.current);
+    onLivesUpdateRef.current([...playerLivesRef.current]);
+    soundManager.playMiss();
+    hapticManager.triggerMiss();
+    addFloatingText(x, y, '-1', '#FDA4AF', i18n.t('duoLifeLost'));
+
+    if (playerLivesRef.current[lane] === 0) {
+      triggerGameOver(lane === 0 ? 2 : 1);
+    }
+  };
 
   // Handle Pointer / Touch interaction
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -471,7 +528,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
-    const lane: 0 | 1 = mode === 'duo' && clickY >= rect.height / 2 ? 1 : 0;
+    const lane: 0 | 1 = mode === 'duo'
+      && (rect.width > rect.height ? clickX >= rect.width / 2 : clickY >= rect.height / 2)
+      ? 1
+      : 0;
 
     totalClicksRef.current++;
     const challenge = geometryChallengeRef.current;
@@ -611,6 +671,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         color: '#FFFFFF',
         lineWidth: 1.5,
       });
+      if (mode === 'duo') loseDuoLife(lane, clickX, clickY);
     }
   };
 
@@ -685,7 +746,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
     let animationFrameId: number;
@@ -693,19 +754,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Resize canvas safely taking devicePixelRatio into account
     const handleResize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.resetTransform();
-      ctx.scale(dpr, dpr);
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
       if (ambientParticlesRef.current.length === 0) {
         initAmbientParticles(width, height);
       }
     };
 
     handleResize();
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(canvas);
     window.addEventListener('resize', handleResize);
 
     const render = (now: number) => {
@@ -749,7 +815,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       // 3. Occasional spontaneous background distant burst
-      if (now - lastRandomBurstRef.current > 3200) {
+      if (isPlaying && !isPaused && now - lastRandomBurstRef.current > 3200) {
         lastRandomBurstRef.current = now;
         triggerAmbientBurst(width, height);
       }
@@ -780,8 +846,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
           ctx.setLineDash([7, 8]);
           ctx.beginPath();
-          ctx.moveTo(18, height / 2);
-          ctx.lineTo(width - 18, height / 2);
+          if (width > height) {
+            ctx.moveTo(width / 2, 18);
+            ctx.lineTo(width / 2, height - 18);
+          } else {
+            ctx.moveTo(18, height / 2);
+            ctx.lineTo(width - 18, height / 2);
+          }
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.restore();
@@ -850,7 +921,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
           ctx.save();
           ctx.textAlign = 'center';
-          ctx.shadowBlur = 22;
+          ctx.shadowBlur = 8;
           ctx.shadowColor = '#C084FC';
 
           ctx.beginPath();
@@ -954,6 +1025,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               lastSpawnTimeRef.current = now - 160;
               continue;
             }
+            if (mode === 'duo') {
+              activeTargets.splice(i, 1);
+              loseDuoLife(target.lane, target.x, target.y);
+              if (gameOverTriggeredRef.current) {
+                ctx.restore();
+                return;
+              }
+              lastSpawnTimeRef.current = now - 160;
+              continue;
+            }
             missTriggered = true;
             break;
           }
@@ -965,7 +1046,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           const currentInnerR = target.innerRadius + breath;
 
           // Soft glow shadow
-          ctx.shadowBlur = 18;
+          ctx.shadowBlur = 7;
           ctx.shadowColor = target.color;
 
           // Inner filled circular button
@@ -986,7 +1067,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.fill();
 
           // Outer Shrinking Approach Line (The Ring)
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 5;
           ctx.shadowColor = target.color;
           ctx.lineWidth = 2.2;
           ctx.strokeStyle = target.color;
@@ -1076,7 +1157,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.fill();
         } else if (p.shape === 'spark') {
           // Elongated spark
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = 3;
           ctx.shadowColor = p.color;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * 0.8, 0, Math.PI * 2);
@@ -1108,7 +1189,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.font = '700 15px Outfit, sans-serif';
         ctx.fillStyle = ft.color;
         ctx.globalAlpha = Math.max(0, ft.alpha);
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 4;
         ctx.shadowColor = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
 
@@ -1121,6 +1202,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       ctx.restore();
+      if (!isPlaying || isPaused) return;
       animationFrameId = requestAnimationFrame(render);
     };
 
@@ -1128,6 +1210,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
     };
   }, [isPlaying, isPaused, mode, initAmbientParticles, triggerGameOver]);

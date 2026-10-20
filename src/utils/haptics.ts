@@ -27,6 +27,15 @@ class HapticEngine {
     return this.enabled && this.mode !== 'off';
   }
 
+  public triggerUi() {
+    if (!this.enabled || this.mode === 'off' || !this.hasNativeSupport()) return;
+    try {
+      navigator.vibrate(8);
+    } catch {
+      // UI vibration is optional when the platform blocks it.
+    }
+  }
+
   public setVisualShakeCallback(callback: ((intensity: number) => void) | null) {
     this.onVisualShakeCallback = callback;
   }

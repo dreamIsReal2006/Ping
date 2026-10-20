@@ -79,4 +79,5 @@ export interface GameStats {
   totalClicks: number;
   gameDurationSec: number;
   playerScores?: [number, number];
+  duoWinner?: 1 | 2;
 }

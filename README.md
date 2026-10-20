@@ -1,6 +1,6 @@
 # Ping
 
-Ping is a portrait-mode rhythm game for Android. Tap each shrinking ring at the
+Ping is a landscape rhythm game for Android phones and tablets. Tap each shrinking ring at the
 right moment, build a combo, and beat your high score. The game supports five UI
 languages (Simplified Chinese, English, Traditional Chinese, Japanese, and Korean)
 and selects one from the device language.
@@ -47,8 +47,12 @@ before the first Play Console upload; it cannot be changed for an existing listi
 
 The title screen offers three modes:
 
-- **Duo:** two players share one device in top/bottom lanes. Each lane has its
-  own score and combo; a missed target ends the match, and the higher score wins.
+- **Duo:** two players share one device in separate lanes. The lanes are
+  top/bottom on portrait layouts and left/right in landscape. Each lane has its
+  own score, combo, and three lives. Empty taps and missed targets cost one life;
+  the first player to lose all three gives the other player the win.
+- Duo target shrink time gets shorter as successful targets are cleared: after
+  5, 10, 20, 30, 50, 75, 100, 115, and 130 clears, then every 15 clears.
 - **Zen:** endless play with progressively faster targets. Missing a target ends
   the run.
 - **2-minute solo:** the timer pauses with the game. Missing a target removes it
@@ -56,8 +60,18 @@ The title screen offers three modes:
 - In every mode, each score counter celebrates when it crosses 100, 1,000,
   10,000, and each subsequent power-of-ten milestone. Duo players celebrate
   their own score milestones independently.
-- Duo places each player's score and a shared-match pause control at the top of
-  that player's half of the screen.
+- Duo places each player's score in their half of the screen and a shared,
+  larger pause control on the center divider.
+- Background music and button feedback use the included `assets\space.m4a` and
+  `assets\button.m4a` tracks. Music loops with fades and pauses when the app
+  moves to the background. Button interactions also use brief haptic feedback
+  when supported by the device.
+- The home screen includes a localized tutorial and quick settings for sound
+  and haptics.
+- Android launches in immersive landscape mode with system bars hidden;
+  transient bars can be revealed with a swipe.
+- Canvas rendering is capped at 1.5 device-pixel ratio and limits transient
+  effects to reduce GPU load on lower-end phones.
 
 - The first 7 successful targets have one ring. A second ring unlocks after 8
   successful targets; a third after 10; and a fourth after 25.
@@ -100,6 +114,10 @@ connected branch. Before publishing, add a real support email to the Play Store
 listing; the policy directs users to the support contact shown on that listing.
 Complete Play Console Data safety declarations according to the actual behavior
 of the final uploaded build.
+
+Release builds use Android Gradle Plugin 9.0.1, Gradle 9.1.0, and R8
+minification/resource shrinking. Test the optimized release build before
+publishing it.
 
 ## Play Console checklist
 

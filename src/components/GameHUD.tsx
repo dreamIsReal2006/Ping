@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pause } from 'lucide-react';
+import { Heart, Pause } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { GameMode } from '../types/game';
+import { playButtonFeedback } from '../utils/uiFeedback';
 
 interface GameHUDProps {
   mode: GameMode;
@@ -9,6 +10,7 @@ interface GameHUDProps {
   combo: number;
   highScore: number;
   playerScores: [number, number];
+  playerLives: [number, number];
   remainingMs: number | null;
   onPause: () => void;
 }
@@ -90,6 +92,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   combo,
   highScore,
   playerScores,
+  playerLives,
   remainingMs,
   onPause,
 }) => {
@@ -101,7 +104,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   const pauseButton = (
     <button
-      onClick={onPause}
+      onClick={() => {
+        playButtonFeedback();
+        onPause();
+      }}
       className="pointer-events-auto rounded-full border border-slate-800/80 bg-slate-900/70 p-2.5 text-slate-300 shadow-sm backdrop-blur-xs transition-all hover:bg-slate-800 hover:text-white active:scale-90"
       title={t('pause')}
       aria-label={t('pause')}
@@ -113,25 +119,52 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   if (mode === 'duo') {
     return (
       <div className="pointer-events-none absolute inset-0 z-20 select-none">
-        <div className="absolute inset-x-4 top-1/2 flex -translate-y-full rotate-180 items-start justify-between sm:inset-x-6">
+        <div className="duo-player-one absolute inset-x-4 top-1/2 flex -translate-y-full rotate-180 items-start justify-between sm:inset-x-6">
           <div className="flex flex-col">
             <span className="text-[10px] font-medium uppercase tracking-wider text-sky-300 sm:text-xs">
               {t('modes.playerOne')}
             </span>
             <ScoreValue score={playerScores[0]} player={1} />
           </div>
-          {pauseButton}
         </div>
 
-        <div className="absolute inset-x-4 top-[calc(50%+0.75rem)] flex items-start justify-between sm:inset-x-6">
+        <div className="duo-player-two absolute inset-x-4 top-[calc(50%+0.75rem)] flex items-start justify-between sm:inset-x-6">
           <div className="flex flex-col">
             <span className="text-[10px] font-medium uppercase tracking-wider text-violet-300 sm:text-xs">
               {t('modes.playerTwo')}
             </span>
             <ScoreValue score={playerScores[1]} player={2} />
           </div>
-          {pauseButton}
         </div>
+
+        <div className="duo-lives duo-lives-one absolute flex items-center gap-1" role="img" aria-label={t('duoLives', { count: playerLives[0] })}>
+          {[0, 1, 2].map((index) => (
+            <Heart
+              key={index}
+              className={`h-4 w-4 transition-colors ${index < playerLives[0] ? 'fill-white text-white' : 'fill-transparent text-white/45'}`}
+            />
+          ))}
+        </div>
+        <div className="duo-lives duo-lives-two absolute flex items-center gap-1" role="img" aria-label={t('duoLives', { count: playerLives[1] })}>
+          {[0, 1, 2].map((index) => (
+            <Heart
+              key={index}
+              className={`h-4 w-4 transition-colors ${index < playerLives[1] ? 'fill-white text-white' : 'fill-transparent text-white/45'}`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            playButtonFeedback();
+            onPause();
+          }}
+          className="pointer-events-auto absolute left-1/2 top-1/2 z-30 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-slate-600 bg-slate-950 text-slate-100 shadow-lg shadow-black/50 transition-all hover:border-sky-400 hover:text-white active:scale-90"
+          title={t('pause')}
+          aria-label={t('pause')}
+        >
+          <Pause className="h-5 w-5" />
+        </button>
 
         <div className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+1rem)] flex -translate-x-1/2 flex-col items-center">
           <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">

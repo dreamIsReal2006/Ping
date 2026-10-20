@@ -1,8 +1,9 @@
 import React from 'react';
 import { Play, RotateCcw, Home, Volume2, VolumeX, Smartphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { soundManager, SoundPack } from '../utils/audio';
+import { SoundPack, soundManager } from '../utils/audio';
 import { hapticManager, HapticMode } from '../utils/haptics';
+import { playButtonFeedback } from '../utils/uiFeedback';
 
 interface PauseMenuProps {
   isOpen: boolean;
@@ -52,24 +53,33 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
         {/* Primary Action Buttons */}
         <div className="w-full space-y-2.5 mb-6">
           <button
-            onClick={onResume}
-            className="w-full py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer shadow-lg shadow-sky-500/20"
+            onClick={() => {
+              playButtonFeedback();
+              onResume();
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer shadow-lg shadow-sky-500/20"
           >
             <Play className="w-4 h-4 fill-white" />
             {t('resume')}
           </button>
 
           <button
-            onClick={onRestart}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 hover:text-white font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+            onClick={() => {
+              playButtonFeedback();
+              onRestart();
+            }}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 hover:text-white font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             {t('restart')}
           </button>
 
           <button
-            onClick={onHome}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/60 text-slate-400 hover:text-slate-200 font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+            onClick={() => {
+              playButtonFeedback();
+              onHome();
+            }}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/60 text-slate-400 hover:text-slate-200 font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <Home className="w-3.5 h-3.5" />
             {t('home')}
@@ -87,10 +97,13 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
             </span>
             <div className="flex items-center gap-1">
               <button
-                onClick={onMuteToggle}
+                onClick={() => {
+                  playButtonFeedback();
+                  onMuteToggle();
+                }}
                 aria-label={t('muteSound')}
                 aria-pressed={isMuted}
-                className="p-1 rounded text-slate-400 hover:text-white"
+                className="rounded p-1 text-slate-400 transition-transform hover:text-white active:scale-90"
               >
                 {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-sky-400" />}
               </button>
@@ -100,10 +113,9 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
                 onChange={(e) => {
                   const pack = e.target.value as SoundPack;
                   onSoundPackChange(pack);
-                  soundManager.setSoundPack(pack);
-                  soundManager.playHit(0, 'PERFECT');
+                  playButtonFeedback();
                 }}
-                className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-sky-500 cursor-pointer"
+                className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-sky-500 cursor-pointer active:scale-[0.98]"
               >
                 <option value="decompression">{t('soundBubble')}</option>
                 <option value="crystal">{t('soundCrystal')}</option>
@@ -124,11 +136,12 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
               aria-label={t('vibration')}
               onChange={(e) => {
                 const mode = e.target.value as HapticMode;
+                soundManager.playButton();
                 onHapticModeChange(mode);
                 hapticManager.setMode(mode);
                 hapticManager.testVibration(mode);
               }}
-              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-sky-500 cursor-pointer"
+              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-sky-500 cursor-pointer active:scale-[0.98]"
             >
               <option value="dual_axis">{t('vibrationDual')}</option>
               <option value="z_axis_sharp">{t('vibrationSharp')}</option>

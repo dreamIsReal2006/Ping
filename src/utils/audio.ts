@@ -1,7 +1,5 @@
 /**
- * Web Audio API procedural sound synthesizer for "Ping".
- * Provides ultra-low latency, zero external asset dependency sound effects
- * designed specifically for decompression and tactile satisfaction.
+ * Combines the bundled music/button audio with procedural gameplay sound effects.
  */
 
 export type SoundPack = 'decompression' | 'crystal' | 'tactile' | 'cyber';
@@ -10,9 +8,14 @@ class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private soundPack: SoundPack = 'decompression';
+  private musicAudio: HTMLAudioElement | null = null;
+  private buttonAudio: HTMLAudioElement | null = null;
+  private musicFadeTimer: number | null = null;
+  private musicRequested = false;
+  private musicTransitionId = 0;
 
   constructor() {
-    // AudioContext will be initialized on first user interaction
+    // AudioContext playback is resumed on launch or the first user interaction.
   }
 
   private initContext() {
@@ -21,12 +24,17 @@ class SoundEngine {
       this.ctx = new AudioCtx();
     }
     if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      void this.ctx.resume().catch(() => {});
     }
   }
 
   public setMuted(muted: boolean) {
     this.isMuted = muted;
+    if (muted) {
+      this.stopMusic();
+    } else if (this.musicRequested) {
+      this.startMusic();
+    }
   }
 
   public getMuted(): boolean {
@@ -39,6 +47,79 @@ class SoundEngine {
 
   public getSoundPack(): SoundPack {
     return this.soundPack;
+  }
+
+  public startMusic() {
+    this.musicRequested = true;
+    if (this.isMuted) return;
+
+    const audio = this.getMusicAudio();
+    const transitionId = ++this.musicTransitionId;
+    audio.loop = true;
+    if (!audio.paused) {
+      this.fadeMusic(0.55, 900);
+      return;
+    }
+    audio.volume = 0;
+    void audio.play().then(() => {
+      if (transitionId !== this.musicTransitionId) return;
+      this.fadeMusic(0.55, 900);
+    }).catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === 'NotAllowedError') return;
+      console.warn('Unable to play background music.', error);
+    });
+  }
+
+  public stopMusic() {
+    if (!this.musicAudio) return;
+    this.musicTransitionId += 1;
+    this.fadeMusic(0, 320, () => this.musicAudio?.pause());
+  }
+
+  private getMusicAudio() {
+    if (!this.musicAudio) {
+      this.musicAudio = new Audio('/audio/space.m4a');
+      this.musicAudio.preload = 'auto';
+      this.musicAudio.loop = true;
+    }
+    return this.musicAudio;
+  }
+
+  private fadeMusic(targetVolume: number, durationMs: number, onComplete?: () => void) {
+    const audio = this.musicAudio;
+    if (!audio) return;
+    if (this.musicFadeTimer !== null) window.clearInterval(this.musicFadeTimer);
+
+    const startVolume = audio.volume;
+    const startedAt = performance.now();
+    this.musicFadeTimer = window.setInterval(() => {
+      const progress = Math.min((performance.now() - startedAt) / durationMs, 1);
+      audio.volume = startVolume + (targetVolume - startVolume) * progress;
+      if (progress === 1) {
+        if (this.musicFadeTimer !== null) window.clearInterval(this.musicFadeTimer);
+        this.musicFadeTimer = null;
+        onComplete?.();
+      }
+    }, 24);
+  }
+
+  public playButton() {
+    if (this.isMuted) return;
+    try {
+      if (!this.buttonAudio) {
+        this.buttonAudio = new Audio('/audio/button.m4a');
+        this.buttonAudio.preload = 'auto';
+      }
+      const audio = this.buttonAudio.cloneNode() as HTMLAudioElement;
+      audio.volume = 0.7;
+      void audio.play().catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === 'NotAllowedError')) {
+          console.warn('Unable to play button sound.', error);
+        }
+      });
+    } catch (error) {
+      console.warn('Unable to initialize button sound.', error);
+    }
   }
 
   /**

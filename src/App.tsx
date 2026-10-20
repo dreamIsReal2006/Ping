@@ -35,6 +35,7 @@ export default function App() {
   const [gameSessionId, setGameSessionId] = useState(0);
   const [gameMode, setGameMode] = useState<GameMode>('zen');
   const [playerScores, setPlayerScores] = useState<[number, number]>([0, 0]);
+  const [playerLives, setPlayerLives] = useState<[number, number]>([3, 3]);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
@@ -53,6 +54,7 @@ export default function App() {
     setScore(0);
     setCombo(0);
     setPlayerScores([0, 0]);
+    setPlayerLives([3, 3]);
     setRemainingMs(mode === 'timed' ? 120_000 : null);
     setGameMode(mode);
     setGameSessionId((sessionId) => sessionId + 1);
@@ -68,6 +70,10 @@ export default function App() {
     soundManager.setMuted(isMuted);
     localStorage.setItem('ping_muted', String(isMuted));
   }, [isMuted]);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) soundManager.startMusic();
+  }, []);
 
   useEffect(() => {
     hapticManager.setMode(hapticMode);
@@ -109,8 +115,11 @@ export default function App() {
     }).catch(handleListenerError);
 
     void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
-      if (!isActive && gameStateRef.current === 'PLAYING') {
-        setGameState('PAUSED');
+      if (!isActive) {
+        soundManager.stopMusic();
+        if (gameStateRef.current === 'PLAYING') setGameState('PAUSED');
+      } else {
+        soundManager.startMusic();
       }
     }).then((listener) => {
       if (disposed) {
@@ -120,10 +129,22 @@ export default function App() {
       }
     }).catch(handleListenerError);
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        soundManager.stopMusic();
+        if (gameStateRef.current === 'PLAYING') setGameState('PAUSED');
+      } else {
+        soundManager.startMusic();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       disposed = true;
       void backButtonListener?.remove().catch(handleListenerError);
       void appStateListener?.remove().catch(handleListenerError);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      soundManager.stopMusic();
     };
   }, []);
 
@@ -190,8 +211,8 @@ export default function App() {
   }
 
   return (
-    <div className="w-screen h-dvh bg-[#020204] flex items-center justify-center overflow-hidden font-sans select-none">
-      <main className="relative w-full max-w-[440px] h-full sm:max-h-[920px] bg-[#050508] sm:border sm:border-slate-800/80 sm:rounded-[36px] overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col">
+    <div className="flex h-dvh w-screen items-center justify-center overflow-hidden bg-[#020204] font-sans select-none">
+      <main className="relative flex h-full w-full max-w-[1440px] flex-col overflow-hidden bg-[#050508] shadow-[0_0_80px_rgba(0,0,0,0.9)]">
         <GameCanvas
           gameSessionId={gameSessionId}
           mode={gameMode}
@@ -199,6 +220,7 @@ export default function App() {
           isPaused={gameState === 'PAUSED'}
           onGameOver={handleGameOver}
           onScoreUpdate={handleScoreUpdate}
+          onLivesUpdate={setPlayerLives}
         />
 
         {gameState === 'TITLE' && (
@@ -206,6 +228,12 @@ export default function App() {
             onStart={startNewGame}
             backHandlerRef={titleScreenBackHandlerRef}
             highScore={highScore}
+            soundPack={soundPack}
+            onSoundPackChange={setSoundPack}
+            isMuted={isMuted}
+            onMuteToggle={() => setIsMuted((muted) => !muted)}
+            hapticMode={hapticMode}
+            onHapticModeChange={setHapticMode}
           />
         )}
 
@@ -216,6 +244,7 @@ export default function App() {
             combo={combo}
             highScore={highScore}
             playerScores={playerScores}
+            playerLives={playerLives}
             remainingMs={remainingMs}
             onPause={() => setGameState('PAUSED')}
           />

@@ -2,6 +2,7 @@ import React from 'react';
 import { RotateCcw, Home, Trophy, Flame, Target } from 'lucide-react';
 import { GameMode, GameStats } from '../types/game';
 import { useTranslation } from 'react-i18next';
+import { playButtonFeedback } from '../utils/uiFeedback';
 
 interface GameOverModalProps {
   stats: GameStats | null;
@@ -21,9 +22,11 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
   const isNewHighScore = mode !== 'duo' && stats.score > 0 && stats.score >= stats.highScore;
   const playerScores = stats.playerScores ?? [0, 0];
-  const duoResult = playerScores[0] === playerScores[1]
-    ? t('modes.draw')
-    : t('modes.winner', { player: playerScores[0] > playerScores[1] ? 1 : 2 });
+  const duoWinner = stats.duoWinner
+    ?? (playerScores[0] === playerScores[1] ? undefined : playerScores[0] > playerScores[1] ? 1 : 2);
+  const duoResult = duoWinner
+    ? t('modes.winner', { player: duoWinner })
+    : t('modes.draw');
   const totalAccurateHits = stats.perfectHits + stats.greatHits + stats.goodHits;
   const accuracyRate = totalAccurateHits > 0 
     ? Math.round(((stats.perfectHits * 1.0 + stats.greatHits * 0.75 + stats.goodHits * 0.5) / totalAccurateHits) * 100) 
@@ -37,7 +40,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         <span className="text-[10px] text-rose-400 font-bold uppercase tracking-widest mb-1">
           {t('gameOver')}
         </span>
-        <h2 className="text-xl font-bold text-white tracking-tight mb-2">
+        <h2 className={`text-xl font-bold tracking-tight mb-2 ${mode === 'duo' && duoWinner ? 'duo-winner-celebration duo-winner-title' : 'text-white'}`}>
           {mode === 'duo' ? duoResult : t('gameOver')}
         </h2>
 
@@ -50,9 +53,22 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             {stats.score.toLocaleString()}
           </span>
           {mode === 'duo' && (
-            <div className="mt-2 grid grid-cols-2 gap-3 w-full text-xs font-semibold">
-              <span className="text-sky-300">{t('modes.playerOneScore', { score: playerScores[0].toLocaleString() })}</span>
-              <span className="text-violet-300">{t('modes.playerTwoScore', { score: playerScores[1].toLocaleString() })}</span>
+            <div className="mt-3 grid grid-cols-2 gap-3 w-full text-xs font-semibold">
+              {([0, 1] as const).map((playerIndex) => {
+                const player = (playerIndex + 1) as 1 | 2;
+                const isWinner = duoWinner === player;
+                return (
+                  <div
+                    key={player}
+                    className={`relative flex flex-col items-center gap-1 rounded-lg py-2 ${isWinner ? 'duo-winner-celebration text-amber-300' : playerIndex === 0 ? 'text-sky-300' : 'text-violet-300'}`}
+                  >
+                    <span>{t(playerIndex === 0 ? 'modes.playerOne' : 'modes.playerTwo')}</span>
+                    <span className={`font-mono-numbers text-base font-black ${isWinner ? 'text-amber-200' : ''}`}>
+                      {playerScores[playerIndex].toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
           {isNewHighScore && (
@@ -98,16 +114,22 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         {/* Quick Action Buttons */}
         <div className="w-full space-y-2.5">
           <button
-            onClick={onRestart}
-            className="w-full py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer shadow-lg shadow-sky-500/20"
+            onClick={() => {
+              playButtonFeedback();
+              onRestart();
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer shadow-lg shadow-sky-500/20"
           >
             <RotateCcw className="w-4 h-4" />
             {t('restart')}
           </button>
 
           <button
-            onClick={onHome}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+            onClick={() => {
+              playButtonFeedback();
+              onHome();
+            }}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-medium text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
           >
             <Home className="w-3.5 h-3.5" />
             {t('home')}
