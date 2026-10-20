@@ -20,6 +20,7 @@ interface TitleScreenProps {
 }
 
 type MenuPhase = 'idle' | 'opening' | 'open' | 'closing' | 'returning';
+const HOME_TIP_KEYS = ['homeTipTiming', 'homeTipFaster', 'homeTipCombo'] as const;
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
   onStart,
@@ -36,6 +37,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   const [menuPhase, setMenuPhase] = useState<MenuPhase>('idle');
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
   const [openPanel, setOpenPanel] = useState<'tutorial' | 'settings' | null>(null);
+  const [homeTipIndex, setHomeTipIndex] = useState(0);
 
   useEffect(() => {
     if (menuPhase !== 'opening' && menuPhase !== 'returning') return;
@@ -44,6 +46,14 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       420
     );
     return () => window.clearTimeout(timeout);
+  }, [menuPhase]);
+
+  useEffect(() => {
+    if (menuPhase !== 'idle') return;
+    const interval = window.setInterval(() => {
+      setHomeTipIndex((index) => (index + 1) % HOME_TIP_KEYS.length);
+    }, 2800);
+    return () => window.clearInterval(interval);
   }, [menuPhase]);
 
   const handleMenuBack = React.useCallback(() => {
@@ -77,6 +87,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
     if (menuPhase !== 'open') return;
     setSelectedMode(mode);
     setMenuPhase('closing');
+    soundManager.startGameMusic();
     playButtonFeedback();
     window.setTimeout(() => onStart(mode), 500);
   };
@@ -156,7 +167,13 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             <CircleHelp className="h-6 w-6" />
           </button>
           <div className={`px-3 text-center transition-opacity ${menuPhase === 'idle' ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
-            <span className="block text-xs font-medium tracking-wide text-sky-100">{t('tapToScore')}</span>
+            <span
+              key={HOME_TIP_KEYS[homeTipIndex]}
+              aria-live="polite"
+              className="home-tip-slide block text-xs font-medium tracking-wide text-sky-100"
+            >
+              {t(HOME_TIP_KEYS[homeTipIndex])}
+            </span>
             <span className="mt-0.5 block text-[10px] text-slate-400">{t('tapToStart')}</span>
           </div>
           <button

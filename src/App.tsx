@@ -51,6 +51,7 @@ export default function App() {
 
   const startNewGame = (mode: GameMode = gameMode) => {
     if (!Capacitor.isNativePlatform()) return;
+    soundManager.startGameMusic();
     setScore(0);
     setCombo(0);
     setPlayerScores([0, 0]);
@@ -72,8 +73,22 @@ export default function App() {
   }, [isMuted]);
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) soundManager.startMusic();
-  }, []);
+    if (!Capacitor.isNativePlatform()) return;
+    switch (gameState) {
+      case 'TITLE':
+        soundManager.startMusic();
+        break;
+      case 'PLAYING':
+        soundManager.startGameMusic();
+        break;
+      case 'PAUSED':
+        soundManager.stopMusic();
+        break;
+      case 'GAME_OVER':
+        soundManager.playGameOver();
+        break;
+    }
+  }, [gameState]);
 
   useEffect(() => {
     hapticManager.setMode(hapticMode);
@@ -119,7 +134,8 @@ export default function App() {
         soundManager.stopMusic();
         if (gameStateRef.current === 'PLAYING') setGameState('PAUSED');
       } else {
-        soundManager.startMusic();
+        if (gameStateRef.current === 'TITLE') soundManager.startMusic();
+        if (gameStateRef.current === 'PLAYING') soundManager.startGameMusic();
       }
     }).then((listener) => {
       if (disposed) {
@@ -134,7 +150,8 @@ export default function App() {
         soundManager.stopMusic();
         if (gameStateRef.current === 'PLAYING') setGameState('PAUSED');
       } else {
-        soundManager.startMusic();
+        if (gameStateRef.current === 'TITLE') soundManager.startMusic();
+        if (gameStateRef.current === 'PLAYING') soundManager.startGameMusic();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -177,7 +194,6 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' || e.code === 'Enter') {
         if (gameState === 'GAME_OVER') {
-          soundManager.playStart();
           startNewGame(gameMode);
         }
       } else if (e.code === 'Escape') {
@@ -216,6 +232,7 @@ export default function App() {
         <GameCanvas
           gameSessionId={gameSessionId}
           mode={gameMode}
+          isHomeScreen={gameState === 'TITLE'}
           isPlaying={gameState === 'PLAYING'}
           isPaused={gameState === 'PAUSED'}
           onGameOver={handleGameOver}
@@ -269,7 +286,6 @@ export default function App() {
             stats={lastGameStats}
             mode={gameMode}
             onRestart={() => {
-              soundManager.playStart();
               startNewGame();
             }}
             onHome={() => setGameState('TITLE')}

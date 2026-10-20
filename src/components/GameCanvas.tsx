@@ -7,6 +7,7 @@ import i18n from '../i18n';
 interface GameCanvasProps {
   gameSessionId: number;
   mode: GameMode;
+  isHomeScreen: boolean;
   isPlaying: boolean;
   isPaused: boolean;
   onGameOver: (stats: GameStats) => void;
@@ -37,6 +38,7 @@ const MAX_FLOATING_TEXTS = 20;
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   gameSessionId,
   mode,
+  isHomeScreen,
   isPlaying,
   isPaused,
   onGameOver,
@@ -475,7 +477,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const triggerGameOver = useCallback((duoWinner?: 1 | 2) => {
     if (gameOverTriggeredRef.current) return;
     gameOverTriggeredRef.current = true;
-    soundManager.playMiss();
     hapticManager.triggerMiss();
 
     const stats: GameStats = {
@@ -509,12 +510,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     playerCombosRef.current[lane] = 0;
     comboRef.current = Math.max(...playerCombosRef.current);
     onLivesUpdateRef.current([...playerLivesRef.current]);
-    soundManager.playMiss();
     hapticManager.triggerMiss();
     addFloatingText(x, y, '-1', '#FDA4AF', i18n.t('duoLifeLost'));
 
     if (playerLivesRef.current[lane] === 0) {
       triggerGameOver(lane === 0 ? 2 : 1);
+    } else {
+      soundManager.playMiss();
     }
   };
 
@@ -780,6 +782,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
+
+      if (!isPlaying && !isPaused) {
+        targetsRef.current = [];
+        geometryChallengeRef.current = null;
+        particlesRef.current = [];
+        shockwavesRef.current = [];
+        floatingTextsRef.current = [];
+        shakeIntensityRef.current = 0;
+      }
 
       // 1. Clear Screen with deep pitch black background
       ctx.save();
@@ -1202,8 +1213,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       ctx.restore();
-      if (!isPlaying || isPaused) return;
-      animationFrameId = requestAnimationFrame(render);
+      if (isHomeScreen || (isPlaying && !isPaused)) {
+        animationFrameId = requestAnimationFrame(render);
+      }
     };
 
     animationFrameId = requestAnimationFrame(render);
@@ -1213,7 +1225,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
     };
-  }, [isPlaying, isPaused, mode, initAmbientParticles, triggerGameOver]);
+  }, [isHomeScreen, isPlaying, isPaused, mode, initAmbientParticles, triggerGameOver]);
 
   return (
     <canvas

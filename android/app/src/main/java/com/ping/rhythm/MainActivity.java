@@ -1,9 +1,9 @@
 package com.ping.rhythm;
 
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Window;
 import com.getcapacitor.BridgeActivity;
+import androidx.activity.EdgeToEdge;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -14,15 +14,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         Window window = getWindow();
-        WindowCompat.setDecorFitsSystemWindows(window, false);
-        window.setStatusBarColor(Color.rgb(9, 11, 16));
-        window.setNavigationBarColor(Color.rgb(9, 11, 16));
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            window.setNavigationBarDividerColor(Color.rgb(30, 41, 59));
-        }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            window.setNavigationBarContrastEnforced(false);
-        }
+        EdgeToEdge.enable(this);
         WindowInsetsControllerCompat insetsController =
                 WindowCompat.getInsetsController(window, window.getDecorView());
         insetsController.setAppearanceLightStatusBars(false);

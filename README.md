@@ -1,6 +1,6 @@
 # Ping
 
-Ping is a landscape rhythm game for Android phones and tablets. Tap each shrinking ring at the
+Ping is a responsive rhythm game for Android phones and tablets. Tap each shrinking ring at the
 right moment, build a combo, and beat your high score. The game supports five UI
 languages (Simplified Chinese, English, Traditional Chinese, Japanese, and Korean)
 and selects one from the device language.
@@ -62,14 +62,15 @@ The title screen offers three modes:
   their own score milestones independently.
 - Duo places each player's score in their half of the screen and a shared,
   larger pause control on the center divider.
-- Background music and button feedback use the included `assets\space.m4a` and
-  `assets\button.m4a` tracks. Music loops with fades and pauses when the app
-  moves to the background. Button interactions also use brief haptic feedback
-  when supported by the device.
+- Home and gameplay use the included `assets\space.m4a` and
+  `assets\gameon.m4a` tracks. The one-shot `assets\gamefailed.m4a` plays at
+  game over. Music pauses when the app moves to the background. Button
+  interactions use `assets\button.m4a` and brief haptic feedback when supported.
 - The home screen includes a localized tutorial and quick settings for sound
   and haptics.
-- Android launches in immersive landscape mode with system bars hidden;
-  transient bars can be revealed with a swipe.
+- Android launches edge-to-edge in immersive mode with system bars hidden;
+  transient bars can be revealed with a swipe. The activity is resizable and
+  supports both portrait and landscape layouts for large-screen devices.
 - Canvas rendering is capped at 1.5 device-pixel ratio and limits transient
   effects to reduce GPU load on lower-end phones.
 

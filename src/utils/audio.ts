@@ -3,16 +3,20 @@
  */
 
 export type SoundPack = 'decompression' | 'crystal' | 'tactile' | 'cyber';
+type MusicTrack = 'home' | 'game' | 'none';
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private soundPack: SoundPack = 'decompression';
   private musicAudio: HTMLAudioElement | null = null;
+  private gameMusicAudio: HTMLAudioElement | null = null;
+  private gameOverAudio: HTMLAudioElement | null = null;
+  private activeMusicAudio: HTMLAudioElement | null = null;
   private buttonAudio: HTMLAudioElement | null = null;
   private musicFadeTimer: number | null = null;
-  private musicRequested = false;
   private musicTransitionId = 0;
+  private desiredTrack: MusicTrack = 'none';
 
   constructor() {
     // AudioContext playback is resumed on launch or the first user interaction.
@@ -29,11 +33,12 @@ class SoundEngine {
   }
 
   public setMuted(muted: boolean) {
+    const desiredTrack = this.desiredTrack;
     this.isMuted = muted;
     if (muted) {
-      this.stopMusic();
-    } else if (this.musicRequested) {
-      this.startMusic();
+      this.pauseAudio();
+    } else if (desiredTrack !== 'none') {
+      this.startTrack(desiredTrack);
     }
   }
 
@@ -50,30 +55,96 @@ class SoundEngine {
   }
 
   public startMusic() {
-    this.musicRequested = true;
+    this.startTrack('home');
+  }
+
+  public startGameMusic() {
+    this.startTrack('game');
+  }
+
+  public resumeMusic() {
+    if (this.desiredTrack !== 'none') this.startTrack(this.desiredTrack);
+  }
+
+  private startTrack(track: Exclude<MusicTrack, 'none'>) {
+    this.desiredTrack = track;
     if (this.isMuted) return;
 
-    const audio = this.getMusicAudio();
+    const audio = track === 'home' ? this.getMusicAudio() : this.getGameMusicAudio();
     const transitionId = ++this.musicTransitionId;
+    if (this.musicFadeTimer !== null) {
+      window.clearInterval(this.musicFadeTimer);
+      this.musicFadeTimer = null;
+    }
+    if (this.activeMusicAudio && this.activeMusicAudio !== audio) {
+      this.activeMusicAudio.pause();
+      this.activeMusicAudio.volume = 0;
+    }
+    this.gameOverAudio?.pause();
+    this.activeMusicAudio = audio;
     audio.loop = true;
     if (!audio.paused) {
-      this.fadeMusic(0.55, 900);
+      this.fadeMusic(audio, 0.55, 900);
       return;
     }
     audio.volume = 0;
     void audio.play().then(() => {
       if (transitionId !== this.musicTransitionId) return;
-      this.fadeMusic(0.55, 900);
+      this.fadeMusic(audio, 0.55, 900);
     }).catch((error: unknown) => {
       if (error instanceof DOMException && error.name === 'NotAllowedError') return;
-      console.warn('Unable to play background music.', error);
+      console.warn(`Unable to play ${track} background music.`, error);
+    });
+  }
+
+  public playGameOver() {
+    this.desiredTrack = 'none';
+    this.musicTransitionId += 1;
+    if (this.musicFadeTimer !== null) {
+      window.clearInterval(this.musicFadeTimer);
+      this.musicFadeTimer = null;
+    }
+    if (this.activeMusicAudio) {
+      this.activeMusicAudio.pause();
+      this.activeMusicAudio.currentTime = 0;
+      this.activeMusicAudio.volume = 0;
+      this.activeMusicAudio = null;
+    }
+    if (this.isMuted) return;
+    if (!this.gameOverAudio) {
+      this.gameOverAudio = new Audio('/audio/gamefailed.m4a');
+      this.gameOverAudio.preload = 'auto';
+    }
+    this.gameOverAudio.pause();
+    this.gameOverAudio.currentTime = 0;
+    this.gameOverAudio.loop = false;
+    this.gameOverAudio.volume = 0.85;
+    void this.gameOverAudio.play().catch((error: unknown) => {
+      if (!(error instanceof DOMException && error.name === 'NotAllowedError')) {
+        console.warn('Unable to play game-over audio.', error);
+      }
     });
   }
 
   public stopMusic() {
-    if (!this.musicAudio) return;
+    this.desiredTrack = 'none';
+    this.pauseAudio();
+  }
+
+  private pauseAudio() {
     this.musicTransitionId += 1;
-    this.fadeMusic(0, 320, () => this.musicAudio?.pause());
+    if (this.musicFadeTimer !== null) {
+      window.clearInterval(this.musicFadeTimer);
+      this.musicFadeTimer = null;
+    }
+    if (this.activeMusicAudio) {
+      const audio = this.activeMusicAudio;
+      this.fadeMusic(audio, 0, 320, () => {
+        audio.pause();
+        if (this.activeMusicAudio === audio) this.activeMusicAudio = null;
+      });
+    }
+    this.gameOverAudio?.pause();
   }
 
   private getMusicAudio() {
@@ -85,8 +156,21 @@ class SoundEngine {
     return this.musicAudio;
   }
 
-  private fadeMusic(targetVolume: number, durationMs: number, onComplete?: () => void) {
-    const audio = this.musicAudio;
+  private getGameMusicAudio() {
+    if (!this.gameMusicAudio) {
+      this.gameMusicAudio = new Audio('/audio/gameon.m4a');
+      this.gameMusicAudio.preload = 'auto';
+      this.gameMusicAudio.loop = true;
+    }
+    return this.gameMusicAudio;
+  }
+
+  private fadeMusic(
+    audio: HTMLAudioElement,
+    targetVolume: number,
+    durationMs: number,
+    onComplete?: () => void
+  ) {
     if (!audio) return;
     if (this.musicFadeTimer !== null) window.clearInterval(this.musicFadeTimer);
 

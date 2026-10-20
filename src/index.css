@@ -153,6 +153,22 @@
   transform-origin: center;
 }
 
+.duo-lives-one {
+  left: calc(50% - 2.75rem);
+  top: calc(50% - 2.35rem);
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.duo-lives-two {
+  left: calc(50% + 2.75rem);
+  top: calc(50% + 2.35rem);
+  transform: translate(-50%, -50%);
+}
+
+.home-tip-slide {
+  animation: home-tip-fade 2.8s ease both;
+}
+
 @media (orientation: landscape) {
   .mode-menu-shell {
     width: min(480px, 60vw);
@@ -334,16 +350,23 @@
 }
 
 @keyframes tutorial-ring-pulse {
-  0%, 10% { opacity: 0.15; transform: scale(0.32); }
-  18% { opacity: 1; transform: scale(1); }
-  70% { opacity: 1; transform: scale(0.36); }
-  82%, 100% { opacity: 0.15; transform: scale(0.32); }
+  0%, 8% { opacity: 0.15; transform: scale(1.2); }
+  15% { opacity: 1; transform: scale(1); }
+  38% { opacity: 1; transform: scale(0.62); }
+  54% { opacity: 1; transform: scale(0.38); }
+  72%, 100% { opacity: 0.15; transform: scale(0.28); }
 }
 
 @keyframes tutorial-pointer-tap {
-  0%, 48%, 100% { transform: translate(12px, 14px) scale(1); }
-  60% { transform: translate(0, 0) scale(0.82); }
-  70% { transform: translate(0, 0) scale(1); }
+  0%, 29%, 100% { transform: translate(12px, 14px) scale(1); }
+  38% { transform: translate(0, 0) scale(0.82); }
+  45% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes home-tip-fade {
+  0%, 8% { opacity: 0; transform: translateY(4px); }
+  18%, 82% { opacity: 1; transform: translateY(0); }
+  94%, 100% { opacity: 0; transform: translateY(-4px); }
 }
 
 @keyframes duo-winner-pop {
