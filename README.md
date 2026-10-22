@@ -62,10 +62,12 @@ The title screen offers three modes:
   their own score milestones independently.
 - Duo places each player's score in their half of the screen and a shared,
   larger pause control on the center divider.
-- Home and gameplay use the included `assets\space.m4a` and
+- Home and gameplay use the included `assets\ifinity space.m4a` and
   `assets\gameon.m4a` tracks. The one-shot `assets\gamefailed.m4a` plays at
   game over. Music pauses when the app moves to the background. Button
   interactions use `assets\button.m4a` and brief haptic feedback when supported.
+- Duo protects the central pause control with visible, non-interactive guard
+  rings; targets do not spawn in the guard area and taps there do not cost a life.
 - The home screen includes a localized tutorial and quick settings for sound
   and haptics.
 - Android launches edge-to-edge in immersive mode with system bars hidden;

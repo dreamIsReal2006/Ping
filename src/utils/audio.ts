@@ -149,7 +149,7 @@ class SoundEngine {
 
   private getMusicAudio() {
     if (!this.musicAudio) {
-      this.musicAudio = new Audio('/audio/space.m4a');
+      this.musicAudio = new Audio('/audio/infinity-space.m4a');
       this.musicAudio.preload = 'auto';
       this.musicAudio.loop = true;
     }

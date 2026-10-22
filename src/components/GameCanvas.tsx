@@ -115,6 +115,25 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const successfulHitsRef = useRef<number>(0);
 
+  const isDuoPauseSafeArea = (
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    targetRadius = 0
+  ) => {
+    if (mode !== 'duo') return false;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const guardOffset = 48;
+    const safeRadius = 21 + targetRadius;
+    return (
+      Math.hypot(x - centerX, y - centerY) <= 38 + targetRadius
+      || Math.hypot(x - centerX, y - (centerY - guardOffset)) <= safeRadius
+      || Math.hypot(x - centerX, y - (centerY + guardOffset)) <= safeRadius
+    );
+  };
+
   // Concentric rings unlock gradually; newly unlocked counts remain mixed with earlier ones.
   const getMaxOuterRings = (hitCount: number) => {
     if (hitCount >= 25) return 4;
@@ -271,32 +290,35 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     let y = 0;
     let validPosition = false;
     let attempts = 0;
+    const hasTargetClearance = (candidateX: number, candidateY: number) => {
+      if (isDuoPauseSafeArea(candidateX, candidateY, width, height, initialOuterRadius)) {
+        return false;
+      }
+      return !targetsRef.current.some((target) => {
+        if (target.lane !== lane) return false;
+        return Math.hypot(target.x - candidateX, target.y - candidateY)
+          < initialOuterRadius * 1.35;
+      });
+    };
 
     while (!validPosition && attempts < 25) {
       attempts++;
       x = safeLeft + Math.random() * (safeRight - safeLeft);
       y = safeTop + Math.random() * (safeBottom - safeTop);
-
-      // Check distance from existing targets to prevent overlapping
-      let overlap = false;
-      for (const t of targetsRef.current) {
-        if (t.lane !== lane) continue;
-        const dx = t.x - x;
-        const dy = t.y - y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < initialOuterRadius * 1.35) {
-          overlap = true;
-          break;
-        }
-      }
-      if (!overlap) {
-        validPosition = true;
-      }
+      validPosition = hasTargetClearance(x, y);
     }
 
     if (!validPosition) {
-      x = safeLeft + Math.random() * (safeRight - safeLeft);
-      y = safeTop + Math.random() * (safeBottom - safeTop);
+      const candidates = [
+        { x: safeLeft, y: safeTop },
+        { x: safeRight, y: safeTop },
+        { x: safeLeft, y: safeBottom },
+        { x: safeRight, y: safeBottom },
+      ];
+      const fallback = candidates.find((candidate) => hasTargetClearance(candidate.x, candidate.y));
+      if (!fallback) return null;
+      x = fallback.x;
+      y = fallback.y;
     }
 
     const activeMultiRingTargets = targetsRef.current.filter((target) => target.totalRings > 1).length;
@@ -530,6 +552,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
+    if (isDuoPauseSafeArea(clickX, clickY, rect.width, rect.height)) return;
     const lane: 0 | 1 = mode === 'duo'
       && (rect.width > rect.height ? clickX >= rect.width / 2 : clickY >= rect.height / 2)
       ? 1

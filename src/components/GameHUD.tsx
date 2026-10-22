@@ -166,6 +166,9 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           <Pause className="h-5 w-5" />
         </button>
 
+        <div className="duo-pause-guard duo-pause-guard-top absolute left-1/2 top-1/2" aria-hidden="true" />
+        <div className="duo-pause-guard duo-pause-guard-bottom absolute left-1/2 top-1/2" aria-hidden="true" />
+
         <div className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+1rem)] flex -translate-x-1/2 flex-col items-center">
           <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
             {t('modes.duo')}
